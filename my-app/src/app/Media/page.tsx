@@ -1,68 +1,23 @@
+"use client";
 import { useState } from "react";
-import MediaForm from "../components/media_form";
 
 export default function Media() {
-  const [files, setFiles] = useState([]);
-  const [selected, setSelected] = useState(null); // for preview
-
-  // handle file selection
-  function handleUpload(e) {
-    const newFiles = Array.from(e.target.files).map((file) =>
-      URL.createObjectURL(file)
-    );
-    setFiles((prev) => [...prev, ...newFiles]);
-  }
-
+  const [image, setImage] = useState("");
   return (
-    <section>
-      {/* Header */}{" "}
-      <div className="flex w-full fixed top-0 left-0 font-bold text-white bg-black justify-center items-center p-4 text-4xl z-10">
-        {" "}
-        <h1>
-          Media{" "}
-          <span className="text-2xl text-red-500">
-            Upload your media files here..{" "}
-          </span>{" "}
-        </h1>{" "}
-      </div>
-      ```
-      {/* Uploaded files */}
-      <div className="flex flex-wrap gap-4 mt-28 px-4">
-        {files.map((file, index) => (
-          <img
-            key={index}
-            src={file}
-            onClick={() => setSelected(file)}
-            className="w-1/4 h-80 object-cover rounded-xl cursor-pointer hover:scale-105 transition"
-          />
-        ))}
+    <section className="p-6">
+      <div className="flex flex-col gap-3 text-black max-w-xl">
+        <p className="font-semibold text-xl">Our Projects</p>
+        <h1 className="font-bold text-4xl text-red-500 leading-tight">
+          We Build Projects That Last
+        </h1>
 
-        {/* Upload button */}
-        <div className="flex w-40 h-40 bg-gray-500 justify-center items-center rounded-xl cursor-pointer">
-          <label
-            htmlFor="fileUpload"
-            className="text-black text-4xl cursor-pointer"
-          >
-            +
-          </label>
-          <input
-            type="file"
-            id="fileUpload"
-            className="hidden"
-            multiple
-            onChange={handleUpload}
-          />
-        </div>
-      </div>
-      {/* Preview modal */}
-      {selected && (
-        <div
-          className="fixed inset-0 bg-black/70 flex justify-center items-center z-20"
-          onClick={() => setSelected(null)}
+        <button
+          onClick={() => (window.location.href = "/upload-form")}
+          className="mt-4 bg-black text-white px-4 py-2 rounded-lg hover:bg-red-600 transition"
         >
-          <img src={selected} className="max-w-3/4 max-h-3/4 rounded-xl" />
-        </div>
-      )}
+          Click here to Upload File..
+        </button>
+      </div>
     </section>
   );
 }

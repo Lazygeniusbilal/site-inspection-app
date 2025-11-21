@@ -32,13 +32,15 @@ export default function Projects() {
       className="font-bold text-xl p-2 rounded mb-6"
     >
       {projects.map((proj) => (
-        <option key={proj} value={proj}>
+        <option key={proj} value={proj} className="text-black">
           {proj}
         </option>
       ))}
 
       {/* Special option for creating a new project */}
-      <option value="__create">+ Create New Project</option>
+      <option value="__create" className="text-black">
+        + Create New Project
+      </option>
     </select>
   );
 }
