@@ -1,43 +1,139 @@
 "use client";
-import { ReactEventHandler, useState } from "react";
 
+import {
+  useState,
+  useEffect,
+  createContext,
+  useContext,
+  ReactNode,
+} from "react";
+import { fetchProjects, createProject } from "@/utils/projects";
+import { useAuth } from "@/context/AuthProvider";
+
+// 1️⃣ Create a context for Project ID
+interface ProjectContextType {
+  projectId: number | null;
+  setProjectId: (id: number | null) => void;
+}
+
+const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
+
+// 2️⃣ Context Provider
+export function ProjectProvider({ children }: { children: ReactNode }) {
+  const [projectId, setProjectId] = useState<number | null>(null);
+  return (
+    <ProjectContext.Provider value={{ projectId, setProjectId }}>
+      {children}
+    </ProjectContext.Provider>
+  );
+}
+
+// 3️⃣ Custom hook to use project context
+export function useProject() {
+  const context = useContext(ProjectContext);
+  if (!context)
+    throw new Error("useProject must be used within ProjectProvider");
+  return context;
+}
+
+// 4️⃣ Projects Component
 export default function Projects() {
-  const [projects, setProjects] = useState([
-    "Project A",
-    "Project B",
-    "Project C",
-  ]);
+  const [projects, setProjects] = useState<{ id: number; name: string }[]>([]);
+  const [activeProject, setActiveProject] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { projectId, setProjectId } = useProject();
+  const { token } = useAuth();
 
-  const [activeProject, setActiveProject] = useState("Project A");
+  // Fetch projects on mount or when token changes
+  useEffect(() => {
+    async function load() {
+      if (!token) {
+        console.log("No token available yet, skipping project fetch");
+        setIsLoading(false);
+        return;
+      }
 
-  const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const data = await fetchProjects(token);
+        console.log("Projects data:", data);
+        const projArray = Array.isArray(data) ? data : data.projects || [];
+        setProjects(projArray);
+        if (projArray.length > 0) {
+          setActiveProject(projArray[0].name);
+          setProjectId(projArray[0].id);
+        }
+      } catch (err: any) {
+        console.error("Fetch failed:", err.message);
+        setError(err.message);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    load();
+  }, [token, setProjectId]);
+
+  const handleChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
     const value = e.target.value;
-
     if (value === "__create") {
       const name = prompt("Enter new project name:");
-
-      if (name && name.trim() !== "") {
-        setProjects([...projects, name]);
-        setActiveProject(name);
+      if (name?.trim()) {
+        try {
+          const result = await createProject(name, token);
+          setProjects((prev) => [
+            ...prev,
+            { id: result.id, name: result.projectName },
+          ]);
+          setActiveProject(result.projectName);
+          setProjectId(result.id);
+        } catch {
+          alert("Failed to create project.");
+        }
       }
     } else {
-      setActiveProject(value);
+      const selected = projects.find((p) => p.name === value);
+      setActiveProject(selected?.name || null);
+      setProjectId(selected?.id || null);
     }
   };
 
+  if (isLoading) {
+    return (
+      <select className="font-bold text-xl p-2 rounded mb-6 bg-gray-600 text-white">
+        <option>Loading projects...</option>
+      </select>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-red-500 text-sm mb-4 p-3 bg-red-100 rounded">
+        Error: {error}
+      </div>
+    );
+  }
+
+  if (!projects.length) {
+    return (
+      <select className="font-bold text-xl p-2 rounded mb-6\">
+        <option>No projects</option>
+      </select>
+    );
+  }
+
   return (
     <select
-      value={activeProject}
+      value={activeProject || ""}
       onChange={handleChange}
       className="font-bold text-xl p-2 rounded mb-6"
     >
       {projects.map((proj) => (
-        <option key={proj} value={proj} className="text-black">
-          {proj}
+        <option key={proj.id} value={proj.name} className="text-black">
+          {proj.name}
         </option>
       ))}
-
-      {/* Special option for creating a new project */}
       <option value="__create" className="text-black">
         + Create New Project
       </option>
