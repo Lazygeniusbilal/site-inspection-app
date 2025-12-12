@@ -6,7 +6,7 @@ import { LoginUser } from "@/utils/login";
 export default function LoginModal() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const { setToken } = useAuth();
+  const { setToken, setUser } = useAuth();
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -16,7 +16,7 @@ export default function LoginModal() {
     setIsLoading(true);
 
     try {
-      await LoginUser(username, password, setToken);
+      await LoginUser(username, password, setToken, setUser);
       // Token is now set, modal will close automatically
     } catch (err: any) {
       setError(err.message || "Login failed. Please try again.");

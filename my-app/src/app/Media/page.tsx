@@ -1,12 +1,65 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useProject } from "../components/Projects";
+import { useAuth } from "@/context/AuthProvider";
+import { fetchMedia } from "@/utils/media";
+
+interface MediaItem {
+  id: number;
+  filename: string;
+  file_name: string;
+  file_url: string;
+  uploader_username: string;
+  project_id: number;
+  created_at?: string;
+}
 
 export default function Media() {
   const [selectedView, setSelectedView] = useState<"images" | "videos">(
     "images"
   );
   const { projectId } = useProject();
+  const { token } = useAuth();
+  const [images, setImages] = useState<MediaItem[]>([]);
+  const [videos, setVideos] = useState<MediaItem[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (projectId && token) {
+      loadMedia();
+    }
+  }, [projectId, token]);
+
+  const loadMedia = async () => {
+    if (!projectId || !token) return;
+
+    setIsLoading(true);
+    setError("");
+
+    try {
+      const data = await fetchMedia(projectId, token);
+
+      // 🔥 Normalize filenames so frontend works
+      data.images = (data.images || []).map((img: any) => ({
+        ...img,
+        file_name: img.file_name || img.filename,
+      }));
+
+      data.videos = (data.videos || []).map((vid: any) => ({
+        ...vid,
+        file_name: vid.file_name || vid.filename,
+      }));
+
+      setImages(data.images || []);
+      setVideos(data.videos || []);
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || "Failed to load media");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <section className="h-full flex flex-col">
@@ -55,22 +108,7 @@ export default function Media() {
               : "text-gray-600 hover:text-gray-900"
           }`}
         >
-          <div className="flex items-center gap-2">
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-              />
-            </svg>
-            Images
-          </div>
+          Images
         </button>
         <button
           onClick={() => setSelectedView("videos")}
@@ -80,22 +118,7 @@ export default function Media() {
               : "text-gray-600 hover:text-gray-900"
           }`}
         >
-          <div className="flex items-center gap-2">
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
-              />
-            </svg>
-            Videos
-          </div>
+          Videos
         </button>
       </div>
 
@@ -103,19 +126,6 @@ export default function Media() {
       <div className="flex-1 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         {!projectId ? (
           <div className="flex flex-col items-center justify-center h-full text-gray-400">
-            <svg
-              className="w-20 h-20 mb-4 text-gray-300"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-              />
-            </svg>
             <h3 className="text-xl font-semibold text-gray-600 mb-2">
               No Project Selected
             </h3>
@@ -123,34 +133,81 @@ export default function Media() {
               Please select a project from the sidebar to view media
             </p>
           </div>
+        ) : isLoading ? (
+          <div className="flex flex-col items-center justify-center h-full text-gray-400">
+            <div className="animate-spin w-12 h-12 border-4 border-gray-300 border-t-red-500 rounded-full mb-4"></div>
+            <p className="text-gray-600">Loading media...</p>
+          </div>
+        ) : error ? (
+          <div className="flex flex-col items-center justify-center h-full text-red-500">
+            <h3 className="text-xl font-semibold text-red-600 mb-2">Error</h3>
+            <p>{error}</p>
+          </div>
+        ) : selectedView === "images" ? (
+          images.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {images.map((image: MediaItem) => (
+                <div
+                  key={image.id}
+                  className="group relative bg-gray-100 rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow"
+                >
+                  <img
+                    src={image.file_url || ""}
+                    alt={image.file_name || "image"}
+                    className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
+                  />
+                  <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all flex flex-col items-center justify-center opacity-0 group-hover:opacity-100">
+                    <a
+                      href={image.file_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="bg-white text-red-600 px-4 py-2 rounded-lg font-semibold hover:bg-gray-100 transition"
+                    >
+                      View
+                    </a>
+                  </div>
+                  <div className="p-3 bg-white border-t">
+                    <p className="text-xs font-semibold text-gray-900 truncate">
+                      {image.file_name}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {image.uploader_username}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-full text-gray-400">
+              <p>No Images Yet</p>
+            </div>
+          )
+        ) : videos.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {videos.map((video) => (
+              <div
+                key={video.id}
+                className="group relative bg-gray-100 rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow"
+              >
+                <video
+                  src={video.file_url}
+                  className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300 bg-black"
+                  controls
+                />
+                <div className="p-3 bg-white border-t">
+                  <p className="text-xs font-semibold text-gray-900 truncate">
+                    {video.file_name}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {video.uploader_username}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
         ) : (
           <div className="flex flex-col items-center justify-center h-full text-gray-400">
-            <svg
-              className="w-20 h-20 mb-4 text-gray-300"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-              />
-            </svg>
-            <h3 className="text-xl font-semibold text-gray-600 mb-2">
-              No {selectedView === "images" ? "Images" : "Videos"} Yet
-            </h3>
-            <p className="text-gray-500 mb-4">
-              Upload {selectedView === "images" ? "images" : "videos"} to see
-              them here
-            </p>
-            <button
-              onClick={() => (window.location.href = "/upload-form")}
-              className="bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded-lg transition"
-            >
-              Upload Now
-            </button>
+            <p>No Videos Yet</p>
           </div>
         )}
       </div>

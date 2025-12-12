@@ -1,4 +1,3 @@
-// In this file we will create context once user is logged in we will share the token with all the files
 "use client";
 import {
   createContext,
@@ -12,33 +11,49 @@ import LoginModal from "@/app/components/LoginModal";
 interface AuthContextType {
   token: string | null;
   setToken: (t: string | null) => void;
+  user: { username: string; role: string } | null;
+  setUser: (u: { username: string; role: string } | null) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
+  const [user, setUser] = useState<{ username: string; role: string } | null>(
+    null
+  );
   const [isChecking, setIsChecking] = useState(true);
 
-  // automatically get the token from localstorage if it exists
+  // Load token + user once on load
   useEffect(() => {
     const savedToken = localStorage.getItem("token");
-    if (savedToken) setToken(savedToken as string | null);
+    const savedUser = localStorage.getItem("user");
+    if (savedToken) setToken(savedToken);
+    if (savedUser) setUser(JSON.parse(savedUser));
     setIsChecking(false);
   }, []);
 
-  // Save token to localStorage whenever it changes
+  // Always save token
   useEffect(() => {
     if (token) {
       localStorage.setItem("token", token);
     }
   }, [token]);
 
-  // Show login modal if no token (after initial check)
+  // Always save user
+  useEffect(() => {
+    if (user) {
+      localStorage.setItem("user", JSON.stringify(user));
+    } else {
+      localStorage.removeItem("user");
+    }
+  }, [user]);
+
+  // Show login modal if no token
   const showLoginModal = !isChecking && !token;
 
   return (
-    <AuthContext.Provider value={{ token, setToken }}>
+    <AuthContext.Provider value={{ token, setToken, user, setUser }}>
       {showLoginModal && <LoginModal />}
       <div className={showLoginModal ? "blur-sm pointer-events-none" : ""}>
         {children}
@@ -49,6 +64,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 export function useAuth() {
   const context = useContext(AuthContext);
-  if (!context) throw new Error("useAuth must be used within a AuthProvider");
+  if (!context) throw new Error("useAuth must be used inside AuthProvider");
   return context;
 }

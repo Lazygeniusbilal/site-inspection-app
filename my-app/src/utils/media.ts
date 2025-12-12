@@ -22,7 +22,7 @@ export const UploadMedia = async (
   const formdata = new FormData();
   formdata.append("file", file);
   formdata.append("file_name", file_name);
-  formdata.append("uploader_username", uploader_username);
+  formdata.append("uploader_email", uploader_username);
   formdata.append("project_id", project_id.toString()); // convert number to string
 
   const headers: HeadersInit = {};

@@ -6,9 +6,24 @@ import Media from "./Media/page";
 import ViewReport from "./ViewReport/page";
 import Projects from "./components/Projects";
 import AdminDashboard from "./admin-dashboard/page";
+import { useAuth } from "@/context/AuthProvider";
+import { useRouter } from "next/navigation";
 
 export default function Main() {
   const [activepage, setActivepage] = useState("");
+  const { setToken, setUser, user } = useAuth();
+  const router = useRouter();
+
+  const handleLogout = () => {
+    // Clear auth data
+    setToken(null);
+    setUser(null);
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+
+    // Redirect to home (login will show)
+    router.push("/");
+  };
 
   const pages = [
     {
@@ -139,6 +154,33 @@ export default function Main() {
 
         {/* Footer */}
         <div className="mt-auto pt-6 border-t border-gray-700">
+          <div className="mb-4">
+            <p className="text-gray-400 text-xs mb-3">
+              Logged in as:{" "}
+              <span className="font-semibold text-gray-300">
+                {user?.username || "User"}
+              </span>
+            </p>
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium transition-all duration-200 hover:shadow-lg"
+            >
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                />
+              </svg>
+              Logout
+            </button>
+          </div>
           <p className="text-gray-500 text-xs text-center">
             © 2025 Site Inspector
           </p>

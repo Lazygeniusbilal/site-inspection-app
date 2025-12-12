@@ -2,12 +2,16 @@
 import { UploadDocs } from "@/utils/document";
 import { UploadMedia } from "@/utils/media";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useProject } from "./Projects";
+import { useAuth } from "@/context/AuthProvider";
 
 export default function MediaForm() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [filePreview, setFilePreview] = useState<string | null>(null);
   const { projectId } = useProject();
+  const { token } = useAuth();
+  const router = useRouter();
 
   // Handle file selection
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -25,13 +29,9 @@ export default function MediaForm() {
   // Handle form submission
   async function handleSubmition(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    const form = e.currentTarget;
 
-    if (!projectId) {
-      alert("Please select a project before uploading!");
-      return;
-    }
-
-    const formdata = new FormData(e.currentTarget);
+    const formdata = new FormData(form);
     const file_name =
       formdata.get("file_name")?.toString() || selectedFile?.name; // fallback to file name
     const uploader_username = formdata.get("uploader_username")?.toString();
@@ -54,26 +54,31 @@ export default function MediaForm() {
           selectedFile,
           file_name,
           uploader_username,
-          projectId
+          projectId!,
+          token
         );
-        alert("Upload successful! File URL: " + res.file_url);
+        alert("Upload successful!");
+        setSelectedFile(null);
+        setFilePreview(null);
+        form.reset();
+        router.push("/");
       } else if (selectedFile.type === "application/pdf") {
         const res = await UploadDocs(
           selectedFile,
           file_name,
           uploader_username,
-          projectId
+          projectId!,
+          token
         );
-        alert("Upload successful! File URL: " + res.file_url);
+        alert("Upload successful!");
+        setSelectedFile(null);
+        setFilePreview(null);
+        form.reset();
+        router.push("/");
       } else {
         alert("Unsupported file type!");
         return;
       }
-
-      // Reset form
-      setSelectedFile(null);
-      setFilePreview(null);
-      e.currentTarget.reset();
     } catch (err: any) {
       alert("Upload failed: " + err.message);
     }
@@ -91,6 +96,15 @@ export default function MediaForm() {
           <p className="text-lg mt-2">
             Easily upload and manage your media here
           </p>
+          {projectId ? (
+            <p className="text-sm text-green-600 mt-2 font-semibold">
+              ✓ Project ID: {projectId}
+            </p>
+          ) : (
+            <p className="text-sm text-red-600 mt-2 font-semibold">
+              ✗ Please select a project from the sidebar
+            </p>
+          )}
         </div>
 
         {/* File name input */}
@@ -107,9 +121,9 @@ export default function MediaForm() {
         {/* Email input */}
         <div>
           <input
-            type="email"
+            type="text"
             name="uploader_username"
-            placeholder="example@example.com"
+            placeholder="Enter your Username"
             className="border p-3 rounded-lg w-full focus:outline-none"
             required
           />
@@ -161,8 +175,16 @@ export default function MediaForm() {
         </div>
 
         {/* Submit Button */}
-        <button className="bg-red-500 text-white font-bold py-3 rounded-lg hover:bg-red-600 transition">
-          Submit
+        <button
+          type="submit"
+          disabled={!projectId}
+          className={`text-white font-bold py-3 rounded-lg transition ${
+            projectId
+              ? "bg-red-500 hover:bg-red-600 cursor-pointer"
+              : "bg-gray-400 cursor-not-allowed opacity-60"
+          }`}
+        >
+          {projectId ? "Submit" : "Select a Project First"}
         </button>
       </form>
     </section>

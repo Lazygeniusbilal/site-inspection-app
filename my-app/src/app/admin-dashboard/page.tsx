@@ -1,6 +1,10 @@
 "use client";
 import { GetUsers } from "@/utils/users";
+import { createUser, deleteUser } from "@/utils/createUser";
+import { useAuth } from "@/context/AuthProvider";
+import { useProject } from "@/app/components/Projects";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 interface User {
   id: number;
@@ -10,20 +14,50 @@ interface User {
 }
 
 export default function AdminDashboard() {
+  const router = useRouter();
+  const { token, user } = useAuth();
+  const [isAuthorized, setIsAuthorized] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    user_id: "",
+    username: "",
+    password: "",
+    role: "user",
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { projectId } = useProject();
+
+  // Check if user is admin
+  useEffect(() => {
+    if (!token || !user) {
+      router.push("/");
+      return;
+    }
+
+    if (user.role !== "admin") {
+      router.push("/");
+      return;
+    }
+
+    setIsAuthorized(true);
+  }, [token, user, router]);
 
   useEffect(() => {
-    loadUsers();
-  }, []);
+    if (isAuthorized) {
+      loadUsers();
+    }
+  }, [isAuthorized]);
 
   const loadUsers = async () => {
     setIsLoading(true);
     try {
       const res = await GetUsers();
-      // Assuming res has a users array
-      setUsers(res.users || []);
+      // Backend returns array directly, or wrapped in users property
+      const usersArray = Array.isArray(res) ? res : res.users || [];
+      setUsers(usersArray);
     } catch (e) {
       console.error("Error while loading users via API: " + e);
     } finally {
@@ -31,9 +65,75 @@ export default function AdminDashboard() {
     }
   };
 
+  if (!isAuthorized) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">
+            Access Denied
+          </h1>
+          <p className="text-gray-600">
+            You do not have permission to access this page.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   const filteredUsers = users.filter((user) =>
     user.username.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const handleCreateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!formData.username || !formData.password) {
+      alert("Please fill in all fields!");
+      return;
+    }
+
+    if (!projectId) {
+      alert("Please select a project first!");
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const userData = {
+        user_id: "",
+        username: formData.username,
+        password: formData.password,
+        role: formData.role,
+        project_id: projectId,
+      };
+      await createUser(userData, token);
+      alert("User created successfully!");
+      setFormData({ user_id: "", username: "", password: "", role: "user" });
+      setIsModalOpen(false);
+      loadUsers();
+    } catch (err: any) {
+      alert("Failed to create user: " + err.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteUser = async (userId: number, username: string) => {
+    if (
+      !window.confirm(`Are you sure you want to delete user "${username}"?`)
+    ) {
+      return;
+    }
+
+    try {
+      await deleteUser(userId, token);
+      alert("User deleted successfully!");
+      loadUsers();
+    } catch (err: any) {
+      alert("Failed to delete user: " + err.message);
+    }
+  };
 
   return (
     <section className="h-full flex flex-col">
@@ -46,7 +146,10 @@ export default function AdminDashboard() {
             </h1>
             <p className="text-gray-600">Manage team members and permissions</p>
           </div>
-          <button className="flex items-center gap-2 bg-gradient-to-r from-red-600 to-red-500 text-white px-6 py-3 rounded-xl hover:shadow-lg transition-all hover:scale-105 font-semibold">
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="flex items-center gap-2 bg-gradient-to-r from-red-600 to-red-500 text-white px-6 py-3 rounded-xl hover:shadow-lg transition-all hover:scale-105 font-semibold"
+          >
             <svg
               className="w-5 h-5"
               fill="none"
@@ -326,7 +429,12 @@ export default function AdminDashboard() {
                             />
                           </svg>
                         </button>
-                        <button className="text-red-600 hover:text-red-900 transition">
+                        <button
+                          className="text-red-600 hover:text-red-900 transition"
+                          onClick={() =>
+                            handleDeleteUser(user.id, user.username)
+                          }
+                        >
                           <svg
                             className="w-5 h-5"
                             fill="none"
@@ -350,6 +458,102 @@ export default function AdminDashboard() {
           </table>
         </div>
       </div>
+
+      {/* Add User Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-lg max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-2xl font-bold text-gray-900">
+                Create New User
+              </h2>
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <svg
+                  className="w-6 h-6"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateUser} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Username
+                </label>
+                <input
+                  type="text"
+                  value={formData.username}
+                  onChange={(e) =>
+                    setFormData({ ...formData, username: e.target.value })
+                  }
+                  placeholder="Enter username"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none text-gray-900"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Password
+                </label>
+                <input
+                  type="password"
+                  value={formData.password}
+                  onChange={(e) =>
+                    setFormData({ ...formData, password: e.target.value })
+                  }
+                  placeholder="Enter password"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none text-gray-900"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Role
+                </label>
+                <select
+                  value={formData.role}
+                  onChange={(e) =>
+                    setFormData({ ...formData, role: e.target.value })
+                  }
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none text-gray-900"
+                >
+                  <option value="user">User</option>
+                  <option value="admin">Admin</option>
+                </select>
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="flex-1 px-4 py-2 bg-gradient-to-r from-red-600 to-red-500 text-white rounded-lg hover:shadow-lg transition disabled:opacity-50 font-medium"
+                >
+                  {isSubmitting ? "Creating..." : "Create User"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </section>
   );
 }

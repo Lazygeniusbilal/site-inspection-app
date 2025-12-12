@@ -20,9 +20,29 @@ const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
 
 // 2️⃣ Context Provider
 export function ProjectProvider({ children }: { children: ReactNode }) {
-  const [projectId, setProjectId] = useState<number | null>(null);
+  // Initialize from localStorage immediately
+  const [projectId, setProjectId] = useState<number | null>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("selectedProjectId");
+      return saved ? parseInt(saved, 10) : null;
+    }
+    return null;
+  });
+
+  // Save to localStorage whenever it changes
+  const setProjectIdWithStorage = (id: number | null) => {
+    setProjectId(id);
+    if (id) {
+      localStorage.setItem("selectedProjectId", id.toString());
+    } else {
+      localStorage.removeItem("selectedProjectId");
+    }
+  };
+
   return (
-    <ProjectContext.Provider value={{ projectId, setProjectId }}>
+    <ProjectContext.Provider
+      value={{ projectId, setProjectId: setProjectIdWithStorage }}
+    >
       {children}
     </ProjectContext.Provider>
   );
@@ -61,9 +81,17 @@ export default function Projects() {
         console.log("Projects data:", data);
         const projArray = Array.isArray(data) ? data : data.projects || [];
         setProjects(projArray);
-        if (projArray.length > 0) {
+
+        // Only set default project if no project is already selected
+        if (projArray.length > 0 && !projectId) {
           setActiveProject(projArray[0].name);
           setProjectId(projArray[0].id);
+        } else if (projArray.length > 0 && projectId) {
+          // If a project is already selected, find and set its name
+          const selected = projArray.find((p: any) => p.id === projectId);
+          if (selected) {
+            setActiveProject(selected.name);
+          }
         }
       } catch (err: any) {
         console.error("Fetch failed:", err.message);
@@ -73,7 +101,7 @@ export default function Projects() {
       }
     }
     load();
-  }, [token, setProjectId]);
+  }, [token, setProjectId, projectId]);
 
   const handleChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
     const value = e.target.value;
