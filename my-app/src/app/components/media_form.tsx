@@ -87,17 +87,17 @@ export default function MediaForm() {
   return (
     <section className="bg-gray-300 min-h-screen flex justify-center items-center p-4">
       <form
-        className="bg-white w-7/10 min-h-[700px] p-8 flex flex-col space-y-6 rounded-2xl shadow-lg text-black"
+        className="bg-white w-full sm:w-11/12 lg:w-7/10 max-w-2xl min-h-[700px] p-4 sm:p-8 flex flex-col space-y-6 rounded-2xl shadow-lg text-black"
         onSubmit={handleSubmition}
       >
         {/* Header */}
-        <div className="p-4 text-center">
-          <h1 className="text-3xl font-bold">Upload your Files!</h1>
-          <p className="text-lg mt-2">
+        <div className="p-2 sm:p-4 text-center">
+          <h1 className="text-2xl sm:text-3xl font-bold">Upload your Files!</h1>
+          <p className="text-base sm:text-lg mt-2">
             Easily upload and manage your media here
           </p>
           {projectId ? (
-            <p className="text-sm text-green-600 mt-2 font-semibold">
+            <p className="text-xs sm:text-sm text-green-600 mt-2 font-semibold">
               ✓ Project ID: {projectId}
             </p>
           ) : (

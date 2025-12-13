@@ -65,12 +65,12 @@ export default function Media() {
     <section className="h-full flex flex-col">
       {/* Header */}
       <div className="mb-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
               Media Gallery
             </h1>
-            <p className="text-gray-600">
+            <p className="text-sm sm:text-base text-gray-600">
               {projectId
                 ? `Viewing media for Project ID: ${projectId}`
                 : "Select a project to view media"}
@@ -78,7 +78,7 @@ export default function Media() {
           </div>
           <button
             onClick={() => (window.location.href = "/upload-form")}
-            className="flex items-center gap-2 bg-gradient-to-r from-red-600 to-red-500 text-white px-6 py-3 rounded-xl hover:shadow-lg transition-all hover:scale-105 font-semibold"
+            className="flex items-center justify-center gap-2 bg-gradient-to-r from-red-600 to-red-500 text-white px-4 sm:px-6 py-3 rounded-xl hover:shadow-lg transition-all hover:scale-105 font-semibold text-sm sm:text-base whitespace-nowrap"
           >
             <svg
               className="w-5 h-5"
@@ -99,10 +99,10 @@ export default function Media() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2 mb-6 border-b border-gray-200">
+      <div className="flex gap-2 mb-6 border-b border-gray-200 overflow-x-auto">
         <button
           onClick={() => setSelectedView("images")}
-          className={`px-6 py-3 font-semibold transition-all ${
+          className={`px-4 sm:px-6 py-3 font-semibold transition-all text-sm sm:text-base whitespace-nowrap ${
             selectedView === "images"
               ? "text-red-600 border-b-2 border-red-600"
               : "text-gray-600 hover:text-gray-900"
@@ -112,7 +112,7 @@ export default function Media() {
         </button>
         <button
           onClick={() => setSelectedView("videos")}
-          className={`px-6 py-3 font-semibold transition-all ${
+          className={`px-4 sm:px-6 py-3 font-semibold transition-all text-sm sm:text-base whitespace-nowrap ${
             selectedView === "videos"
               ? "text-red-600 border-b-2 border-red-600"
               : "text-gray-600 hover:text-gray-900"
@@ -123,29 +123,33 @@ export default function Media() {
       </div>
 
       {/* Content Area */}
-      <div className="flex-1 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+      <div className="flex-1 bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
         {!projectId ? (
           <div className="flex flex-col items-center justify-center h-full text-gray-400">
-            <h3 className="text-xl font-semibold text-gray-600 mb-2">
+            <h3 className="text-lg sm:text-xl font-semibold text-gray-600 mb-2">
               No Project Selected
             </h3>
-            <p className="text-gray-500">
+            <p className="text-sm sm:text-base text-gray-500">
               Please select a project from the sidebar to view media
             </p>
           </div>
         ) : isLoading ? (
           <div className="flex flex-col items-center justify-center h-full text-gray-400">
             <div className="animate-spin w-12 h-12 border-4 border-gray-300 border-t-red-500 rounded-full mb-4"></div>
-            <p className="text-gray-600">Loading media...</p>
+            <p className="text-sm sm:text-base text-gray-600">
+              Loading media...
+            </p>
           </div>
         ) : error ? (
           <div className="flex flex-col items-center justify-center h-full text-red-500">
-            <h3 className="text-xl font-semibold text-red-600 mb-2">Error</h3>
-            <p>{error}</p>
+            <h3 className="text-lg sm:text-xl font-semibold text-red-600 mb-2">
+              Error
+            </h3>
+            <p className="text-sm sm:text-base">{error}</p>
           </div>
         ) : selectedView === "images" ? (
           images.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {images.map((image: MediaItem) => (
                 <div
                   key={image.id}
@@ -154,14 +158,14 @@ export default function Media() {
                   <img
                     src={image.file_url || ""}
                     alt={image.file_name || "image"}
-                    className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
+                    className="w-full h-40 sm:h-48 object-cover group-hover:scale-105 transition-transform duration-300"
                   />
                   <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all flex flex-col items-center justify-center opacity-0 group-hover:opacity-100">
                     <a
                       href={image.file_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="bg-white text-red-600 px-4 py-2 rounded-lg font-semibold hover:bg-gray-100 transition"
+                      className="bg-white text-red-600 px-4 py-2 rounded-lg font-semibold hover:bg-gray-100 transition text-sm"
                     >
                       View
                     </a>
@@ -179,11 +183,11 @@ export default function Media() {
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center h-full text-gray-400">
-              <p>No Images Yet</p>
+              <p className="text-sm sm:text-base">No Images Yet</p>
             </div>
           )
         ) : videos.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {videos.map((video) => (
               <div
                 key={video.id}
@@ -191,7 +195,7 @@ export default function Media() {
               >
                 <video
                   src={video.file_url}
-                  className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300 bg-black"
+                  className="w-full h-40 sm:h-48 object-cover group-hover:scale-105 transition-transform duration-300 bg-black"
                   controls
                 />
                 <div className="p-3 bg-white border-t">
@@ -207,7 +211,7 @@ export default function Media() {
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center h-full text-gray-400">
-            <p>No Videos Yet</p>
+            <p className="text-sm sm:text-base">No Videos Yet</p>
           </div>
         )}
       </div>

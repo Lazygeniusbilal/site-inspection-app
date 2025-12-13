@@ -180,37 +180,39 @@ export default function Documentation() {
   return (
     <section className="flex flex-col h-full bg-gray-50">
       {/* HEADER */}
-      <div className="bg-white border-b border-gray-200 p-6 shadow-sm">
-        <div className="flex items-center justify-between mb-4">
+      <div className="bg-white border-b border-gray-200 p-4 sm:p-6 shadow-sm">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">Documentation</h2>
-            <p className="text-sm text-gray-600">
+            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">
+              Documentation
+            </h2>
+            <p className="text-xs sm:text-sm text-gray-600">
               {projectId
                 ? `Project ID: ${projectId}`
                 : "Select a project to view documents"}
             </p>
           </div>
-          <div className="flex gap-4 items-center">
-            <div className="bg-blue-50 px-4 py-2 rounded-lg text-center">
-              <p className="text-2xl font-bold text-blue-600">
+          <div className="flex gap-2 sm:gap-4 items-center w-full sm:w-auto">
+            <div className="bg-blue-50 px-3 sm:px-4 py-2 rounded-lg text-center flex-1 sm:flex-none">
+              <p className="text-xl sm:text-2xl font-bold text-blue-600">
                 {documents.length}
               </p>
               <p className="text-xs text-gray-600">Documents</p>
             </div>
-            <div className="bg-purple-50 px-4 py-2 rounded-lg text-center">
+            <div className="bg-purple-50 px-3 sm:px-4 py-2 rounded-lg text-center flex-1 sm:flex-none">
               <p className="text-2xl font-bold text-purple-600">
                 {reports.length}
               </p>
               <p className="text-xs text-gray-600">Reports</p>
             </div>
             {projectId && (
-              <div className="flex gap-2">
+              <div className="flex gap-2 w-full sm:w-auto flex-col sm:flex-row">
                 <button
                   onClick={() => setIsModalOpen(true)}
-                  className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-blue-500 text-white px-6 py-3 rounded-xl hover:shadow-lg transition-all hover:scale-105 font-semibold"
+                  className="flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-blue-500 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-xl hover:shadow-lg transition-all hover:scale-105 font-semibold text-sm sm:text-base whitespace-nowrap"
                 >
                   <svg
-                    className="w-5 h-5"
+                    className="w-4 sm:w-5 h-4 sm:h-5"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -222,14 +224,15 @@ export default function Documentation() {
                       d="M12 4v16m8-8H4"
                     />
                   </svg>
-                  Upload Document
+                  <span className="hidden sm:inline">Upload Document</span>
+                  <span className="sm:hidden">Upload</span>
                 </button>
                 <button
                   onClick={() => setIsGenerateReportOpen(true)}
-                  className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-purple-500 text-white px-6 py-3 rounded-xl hover:shadow-lg transition-all hover:scale-105 font-semibold"
+                  className="flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-purple-500 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-xl hover:shadow-lg transition-all hover:scale-105 font-semibold text-sm sm:text-base whitespace-nowrap"
                 >
                   <svg
-                    className="w-5 h-5"
+                    className="w-4 sm:w-5 h-4 sm:h-5"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -241,18 +244,18 @@ export default function Documentation() {
                       d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                     />
                   </svg>
-                  Generate Report
+                  <span className="hidden sm:inline">Generate Report</span>
+                  <span className="sm:hidden">Report</span>
                 </button>
               </div>
             )}
           </div>
-        </div>
-
+        </div>{" "}
         {/* Tabs */}
-        <div className="flex gap-4 border-b border-gray-200 mb-4">
+        <div className="flex gap-2 sm:gap-4 border-b border-gray-200 mb-4 overflow-x-auto">
           <button
             onClick={() => setActiveTab("documents")}
-            className={`px-4 py-2 font-semibold transition-all ${
+            className={`px-3 sm:px-4 py-2 font-semibold transition-all text-sm sm:text-base whitespace-nowrap ${
               activeTab === "documents"
                 ? "text-blue-600 border-b-2 border-blue-600"
                 : "text-gray-600 hover:text-gray-900"
@@ -262,7 +265,7 @@ export default function Documentation() {
           </button>
           <button
             onClick={() => setActiveTab("reports")}
-            className={`px-4 py-2 font-semibold transition-all ${
+            className={`px-3 sm:px-4 py-2 font-semibold transition-all text-sm sm:text-base whitespace-nowrap ${
               activeTab === "reports"
                 ? "text-purple-600 border-b-2 border-purple-600"
                 : "text-gray-600 hover:text-gray-900"
@@ -271,7 +274,6 @@ export default function Documentation() {
             📊 Generated Reports
           </button>
         </div>
-
         {/* Search Bar */}
         {projectId && (
           <input
@@ -279,13 +281,13 @@ export default function Documentation() {
             placeholder={`Search ${activeTab}...`}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         )}
       </div>
 
       {/* CONTENT */}
-      <div className="flex-1 overflow-y-auto p-6">
+      <div className="flex-1 overflow-y-auto p-4 sm:p-6">
         {/* No project selected */}
         {!projectId && (
           <div className="flex items-center justify-center h-full text-gray-400">

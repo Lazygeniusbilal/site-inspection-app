@@ -11,8 +11,14 @@ import { useRouter } from "next/navigation";
 
 export default function Main() {
   const [activepage, setActivepage] = useState("");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const { setToken, setUser, user } = useAuth();
   const router = useRouter();
+
+  const handlePageSelect = (pageName: string) => {
+    setActivepage(pageName);
+    setSidebarOpen(false); // Close sidebar on mobile after selecting page
+  };
 
   const handleLogout = () => {
     // Clear auth data
@@ -124,11 +130,52 @@ export default function Main() {
   ];
 
   return (
-    <section className="flex min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+    <section className="flex flex-col md:flex-row min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+      {/* Mobile Hamburger Button */}
+      <button
+        onClick={() => setSidebarOpen(!sidebarOpen)}
+        className="md:hidden fixed top-4 left-4 z-40 bg-gradient-to-r from-gray-900 to-gray-800 text-white p-2 rounded-lg shadow-lg hover:from-gray-800 hover:to-gray-700 transition-all"
+      >
+        <svg
+          className="w-6 h-6"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          {sidebarOpen ? (
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M6 18L18 6M6 6l12 12"
+            />
+          ) : (
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M4 6h16M4 12h16M4 18h16"
+            />
+          )}
+        </svg>
+      </button>
+
+      {/* Mobile Overlay */}
+      {sidebarOpen && (
+        <div
+          onClick={() => setSidebarOpen(false)}
+          className="md:hidden fixed inset-0 bg-black/50 z-30"
+        />
+      )}
+
       {/* Sidebar */}
-      <aside className="bg-gradient-to-b from-gray-900 to-gray-800 w-72 min-h-screen p-6 flex flex-col shadow-2xl border-r border-gray-700">
+      <aside
+        className={`fixed md:relative md:w-72 w-64 bg-gradient-to-b from-gray-900 to-gray-800 min-h-screen p-4 md:p-6 flex flex-col shadow-2xl border-b md:border-b-0 md:border-r border-gray-700 z-40 transition-transform duration-300 ${
+          sidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
+        }`}
+      >
         {/* Logo/Brand */}
-        <div className="mb-8">
+        <div className="mb-8 mt-12 md:mt-0">
           <h1 className="text-2xl font-bold text-white mb-1">Site Inspector</h1>
           <p className="text-gray-400 text-sm">Project Management</p>
         </div>
@@ -139,7 +186,7 @@ export default function Main() {
           {pages.map((item) => (
             <button
               key={item.name}
-              onClick={() => setActivepage(item.name)}
+              onClick={() => handlePageSelect(item.name)}
               className={`flex items-center gap-3 px-4 py-3 rounded-lg text-left font-medium transition-all duration-200 ${
                 activepage === item.name
                   ? "bg-gradient-to-r from-red-600 to-red-500 text-white shadow-lg scale-105"
@@ -188,7 +235,7 @@ export default function Main() {
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 p-8 h-screen overflow-y-auto">
+      <main className="flex-1 p-4 md:p-8 h-auto md:h-screen overflow-y-auto pt-16 md:pt-4">
         {activepage === "" ? (
           <div className="flex flex-col justify-center items-center h-full">
             <div className="text-center max-w-2xl">
@@ -209,14 +256,14 @@ export default function Main() {
                   </svg>
                 </div>
               </div>
-              <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
+              <h1 className="text-3xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
                 Welcome to Your Dashboard
               </h1>
-              <p className="text-gray-600 text-lg mb-8">
+              <p className="text-gray-600 text-base md:text-lg mb-8">
                 Manage your site inspection projects with ease. Select an option
                 from the sidebar to get started.
               </p>
-              <div className="grid grid-cols-2 gap-4 mt-12">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-12">
                 {pages.slice(0, 4).map((page) => (
                   <button
                     key={page.name}
