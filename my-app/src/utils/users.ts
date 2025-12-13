@@ -1,5 +1,5 @@
 // api
-const API_URL= "http://127.0.0.1:8000";
+const API_URL = "https://site-inspection-backend.onrender.com";
 
 export const GetUsers= async () => {
     // try to fetch the data users 

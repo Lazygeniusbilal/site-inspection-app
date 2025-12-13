@@ -1,5 +1,5 @@
-// api url localhost
-const API_URL = "http://127.0.0.1:8000";
+// api url production
+const API_URL = "https://site-inspection-backend.onrender.com";
 
 export const createProject = async (
   projectName: string,
