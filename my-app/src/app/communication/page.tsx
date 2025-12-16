@@ -105,13 +105,13 @@ export default function Communication() {
   return (
     <section className="flex flex-col h-full bg-gray-50">
       {/* HEADER */}
-      <div className="bg-white border-b border-gray-200 p-4 shadow-sm">
-        <div className="flex items-center justify-between">
+      <div className="bg-white border-b border-gray-200 p-3 sm:p-4 shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900">
               Team Communication
             </h2>
-            <p className="text-sm text-gray-600">
+            <p className="text-xs sm:text-sm text-gray-600">
               {projectId
                 ? `Project Chat - ID: ${projectId}`
                 : "Select a project to start chatting"}
@@ -123,13 +123,13 @@ export default function Communication() {
             value={currentUsername}
             onChange={(e) => setCurrentUsername(e.target.value)}
             placeholder="Your name"
-            className="px-3 py-2 border rounded-lg text-sm"
+            className="w-full sm:w-auto px-3 py-2 border rounded-lg text-xs sm:text-sm focus:ring-2 focus:ring-blue-500 outline-none"
           />
         </div>
       </div>
 
       {/* MESSAGES */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-4">
+      <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3 sm:space-y-4">
         {/* No project selected */}
         {!projectId && (
           <div className="flex items-center justify-center h-full text-gray-400">
@@ -167,12 +167,12 @@ export default function Communication() {
               )}
 
               <div
-                className={`max-w-sm ${
+                className={`max-w-xs sm:max-w-sm ${
                   msg.isCurrentUser ? "items-end" : "items-start"
                 } flex flex-col`}
               >
                 <div
-                  className={`rounded-2xl px-4 py-3 shadow-md transition-all hover:shadow-lg ${
+                  className={`rounded-2xl px-3 sm:px-4 py-2 sm:py-3 shadow-md transition-all hover:shadow-lg text-xs sm:text-sm ${
                     msg.isCurrentUser
                       ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-br-none"
                       : "bg-white text-gray-900 border border-gray-200 rounded-bl-none"
@@ -183,9 +183,7 @@ export default function Communication() {
                       {msg.sender}
                     </span>
                   )}
-                  <p className="text-sm break-words leading-relaxed">
-                    {msg.text}
-                  </p>
+                  <p className="break-words leading-relaxed"></p>
                 </div>
 
                 <span
@@ -213,19 +211,19 @@ export default function Communication() {
 
       {/* INPUT */}
       {projectId && (
-        <div className="bg-white border-t border-gray-200 p-4 shadow-lg">
-          <form onSubmit={handleSubmit} className="flex gap-3">
+        <div className="bg-white border-t border-gray-200 p-3 sm:p-4 shadow-lg">
+          <form onSubmit={handleSubmit} className="flex gap-2 sm:gap-3">
             <input
               type="text"
               value={userInput}
               onChange={(e) => setUserInput(e.target.value)}
               placeholder="Type your message..."
-              className="flex-1 px-4 py-3 rounded-xl border text-black"
+              className="flex-1 px-3 sm:px-4 py-2 sm:py-3 rounded-lg border text-black text-sm focus:ring-2 focus:ring-blue-500 outline-none"
             />
             <button
               type="submit"
               disabled={isLoading || !userInput.trim()}
-              className="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-xl"
+              className="px-4 sm:px-6 py-2 sm:py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium text-sm sm:text-base whitespace-nowrap transition"
             >
               Send
             </button>

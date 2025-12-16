@@ -4,44 +4,23 @@ import { useState } from "react";
 
 export default function ViewReport() {
   const { projectId } = useProject();
-  const [reportType, setReportType] = useState<
-    "summary" | "detailed" | "analytics"
-  >("summary");
+  const [reportType, setReportType] = useState<"summary" | "detailed">(
+    "summary"
+  );
 
   return (
     <section className="h-full flex flex-col">
       {/* Header */}
       <div className="mb-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              Project Reports
-            </h1>
-            <p className="text-gray-600">
-              {projectId
-                ? `Generate and view reports for Project ID: ${projectId}`
-                : "Select a project to view reports"}
-            </p>
-          </div>
-          <button
-            disabled={!projectId}
-            className="flex items-center gap-2 bg-gradient-to-r from-red-600 to-red-500 text-white px-6 py-3 rounded-xl hover:shadow-lg transition-all hover:scale-105 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-              />
-            </svg>
-            Generate Report
-          </button>
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            Project Reports
+          </h1>
+          <p className="text-gray-600">
+            {projectId
+              ? `View reports for Project ID: ${projectId}`
+              : "Select a project to view reports"}
+          </p>
         </div>
       </div>
 
@@ -66,16 +45,6 @@ export default function ViewReport() {
           }`}
         >
           Detailed Report
-        </button>
-        <button
-          onClick={() => setReportType("analytics")}
-          className={`px-6 py-3 rounded-lg font-semibold transition-all ${
-            reportType === "analytics"
-              ? "bg-red-500 text-white shadow-md"
-              : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-200"
-          }`}
-        >
-          Analytics
         </button>
       </div>
 
@@ -106,14 +75,14 @@ export default function ViewReport() {
         ) : (
           <div className="space-y-6">
             {/* Quick Stats */}
-            <div className="grid grid-cols-4 gap-4">
-              <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-xl">
+            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+              <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 sm:p-6 rounded-xl h-full">
                 <div className="flex items-center justify-between mb-2">
-                  <p className="text-blue-700 font-medium text-sm">
+                  <p className="text-blue-700 font-medium text-xs sm:text-sm">
                     Total Media
                   </p>
                   <svg
-                    className="w-5 h-5 text-blue-600"
+                    className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -126,16 +95,18 @@ export default function ViewReport() {
                     />
                   </svg>
                 </div>
-                <p className="text-3xl font-bold text-blue-900">0</p>
+                <p className="text-2xl sm:text-3xl font-bold text-blue-900">
+                  0
+                </p>
               </div>
 
-              <div className="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-xl">
+              <div className="bg-gradient-to-br from-green-50 to-green-100 p-4 sm:p-6 rounded-xl h-full">
                 <div className="flex items-center justify-between mb-2">
-                  <p className="text-green-700 font-medium text-sm">
+                  <p className="text-green-700 font-medium text-xs sm:text-sm">
                     Documents
                   </p>
                   <svg
-                    className="w-5 h-5 text-green-600"
+                    className="w-4 h-4 sm:w-5 sm:h-5 text-green-600"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -148,16 +119,18 @@ export default function ViewReport() {
                     />
                   </svg>
                 </div>
-                <p className="text-3xl font-bold text-green-900">0</p>
+                <p className="text-2xl sm:text-3xl font-bold text-green-900">
+                  0
+                </p>
               </div>
 
-              <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-6 rounded-xl">
+              <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-4 sm:p-6 rounded-xl h-full">
                 <div className="flex items-center justify-between mb-2">
-                  <p className="text-purple-700 font-medium text-sm">
+                  <p className="text-purple-700 font-medium text-xs sm:text-sm">
                     Messages
                   </p>
                   <svg
-                    className="w-5 h-5 text-purple-600"
+                    className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -170,16 +143,18 @@ export default function ViewReport() {
                     />
                   </svg>
                 </div>
-                <p className="text-3xl font-bold text-purple-900">0</p>
+                <p className="text-2xl sm:text-3xl font-bold text-purple-900">
+                  0
+                </p>
               </div>
 
-              <div className="bg-gradient-to-br from-orange-50 to-orange-100 p-6 rounded-xl">
+              <div className="bg-gradient-to-br from-orange-50 to-orange-100 p-4 sm:p-6 rounded-xl h-full">
                 <div className="flex items-center justify-between mb-2">
-                  <p className="text-orange-700 font-medium text-sm">
+                  <p className="text-orange-700 font-medium text-xs sm:text-sm">
                     Team Members
                   </p>
                   <svg
-                    className="w-5 h-5 text-orange-600"
+                    className="w-4 h-4 sm:w-5 sm:h-5 text-orange-600"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -192,7 +167,9 @@ export default function ViewReport() {
                     />
                   </svg>
                 </div>
-                <p className="text-3xl font-bold text-orange-900">0</p>
+                <p className="text-2xl sm:text-3xl font-bold text-orange-900">
+                  0
+                </p>
               </div>
             </div>
 
@@ -215,10 +192,9 @@ export default function ViewReport() {
                 <h3 className="text-lg font-semibold text-gray-700 mb-2">
                   {reportType === "summary" && "Summary Report Preview"}
                   {reportType === "detailed" && "Detailed Report Preview"}
-                  {reportType === "analytics" && "Analytics Dashboard"}
                 </h3>
                 <p className="text-gray-600 mb-4">
-                  Click "Generate Report" to create a {reportType} report
+                  View your generated {reportType} report
                 </p>
                 <p className="text-sm text-gray-500">
                   Report will include project data, media, documents, and team
