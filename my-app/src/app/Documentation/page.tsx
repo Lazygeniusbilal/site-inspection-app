@@ -1,4 +1,5 @@
 "use client";
+
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthProvider";
 import { useProject } from "@/app/components/Projects";
@@ -24,195 +25,257 @@ interface Report {
 }
 
 export default function Documentation() {
+  const { token } = useAuth();
+
+  let projectId: number | null = null;
+  try {
+    const project = useProject();
+    projectId = project.projectId;
+  } catch (e) {
+    console.warn("ProjectProvider not available");
+  }
+
   const [documents, setDocuments] = useState<Document[]>([]);
   const [reports, setReports] = useState<Report[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [docsLoading, setDocsLoading] = useState(false);
+  const [reportsLoading, setReportsLoading] = useState(false);
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isGenerateReportOpen, setIsGenerateReportOpen] = useState(false);
-  const [previewDoc, setPreviewDoc] = useState<Document | null>(null);
-  const [previewReport, setPreviewReport] = useState<Report | null>(null);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [filePreview, setFilePreview] = useState<string | null>(null);
-  const [reportName, setReportName] = useState("");
-  const [reportCreatedBy, setReportCreatedBy] = useState("");
-  const [formData, setFormData] = useState({
-    file_name: "",
-    uploader_username: "",
-  });
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState<"documents" | "reports">(
     "documents"
   );
 
-  const { token } = useAuth();
-  const { projectId } = useProject();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isGenerateReportOpen, setIsGenerateReportOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [formData, setFormData] = useState({
+    file_name: "",
+    uploader_username: "",
+  });
+
+  const [reportName, setReportName] = useState("");
+  const [reportCreatedBy, setReportCreatedBy] = useState("");
+
+  /* ===================== DATA LOADING ===================== */
 
   useEffect(() => {
-    if (projectId) {
-      loadDocuments();
-      loadReports();
-    }
-  }, [projectId]);
+    if (!projectId || !token) return;
+    loadDocuments();
+    loadReports();
+  }, [projectId, token]);
 
   const loadDocuments = async () => {
     if (!projectId || !token) return;
-
-    setIsLoading(true);
+    setDocsLoading(true);
     setError("");
 
     try {
       const data = await fetchDocuments(projectId, token);
-      setDocuments(data.documents || []);
-    } catch (err: any) {
+      setDocuments(data?.documents ?? []);
+    } catch (err) {
       console.error(err);
       setError("Failed to load documents");
     } finally {
-      setIsLoading(false);
+      setDocsLoading(false);
     }
   };
 
   const loadReports = async () => {
     if (!projectId || !token) return;
+    setReportsLoading(true);
 
     try {
       const data = await fetchReports(projectId, token);
-      setReports(data.reports || []);
-    } catch (err: any) {
+      setReports(data?.reports ?? []);
+    } catch (err) {
       console.error(err);
-    }
-  };
-
-  const handleGenerateReport = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!reportName || !reportCreatedBy) {
-      alert("Please fill in all fields!");
-      return;
-    }
-
-    setIsSubmitting(true);
-
-    try {
-      await GenerateReport(reportName, reportCreatedBy, projectId!, token);
-      alert("Report generated successfully!");
-      setReportName("");
-      setReportCreatedBy("");
-      setIsGenerateReportOpen(false);
-      loadReports();
-    } catch (err: any) {
-      alert("Report generation failed: " + err.message);
     } finally {
-      setIsSubmitting(false);
+      setReportsLoading(false);
     }
   };
 
-  const handleDeleteReport = async (reportId: number) => {
-    if (!confirm("Are you sure you want to delete this report?")) return;
-
-    try {
-      await deleteReport(reportId, token);
-      alert("Report deleted successfully!");
-      loadReports();
-    } catch (err: any) {
-      alert("Delete failed: " + err.message);
-    }
-  };
+  /* ===================== HANDLERS ===================== */
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] || null;
-    setSelectedFile(file);
-
-    if (file && file.type === "application/pdf") {
-      const url = URL.createObjectURL(file);
-      setFilePreview(url);
-    } else {
-      setFilePreview(null);
+    const file = e.target.files?.[0] ?? null;
+    if (file && file.type !== "application/pdf") {
+      alert("Only PDF files allowed");
+      return;
     }
+    setSelectedFile(file);
   };
 
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!selectedFile) {
-      alert("Please select a PDF file!");
-      return;
-    }
+    if (!projectId || !token || !selectedFile) return;
 
     if (!formData.file_name || !formData.uploader_username) {
-      alert("Please fill in all fields!");
-      return;
-    }
-
-    if (selectedFile.type !== "application/pdf") {
-      alert("Only PDF files are allowed!");
+      alert("Fill all fields");
       return;
     }
 
     setIsSubmitting(true);
-
     try {
       await UploadDocs(
         selectedFile,
         formData.file_name,
         formData.uploader_username,
-        projectId!,
+        projectId,
         token
       );
-      alert("Document uploaded successfully!");
-      setFormData({ file_name: "", uploader_username: "" });
-      setSelectedFile(null);
-      setFilePreview(null);
       setIsModalOpen(false);
+      setSelectedFile(null);
+      setFormData({ file_name: "", uploader_username: "" });
       loadDocuments();
     } catch (err: any) {
-      alert("Upload failed: " + err.message);
+      alert(err.message || "Upload failed");
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  const handleGenerateReport = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!projectId || !token) return;
+
+    if (!reportName || !reportCreatedBy) {
+      alert("Fill all fields");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await GenerateReport(reportName, reportCreatedBy, projectId, token);
+      setReportName("");
+      setReportCreatedBy("");
+      setIsGenerateReportOpen(false);
+      loadReports();
+    } catch (err: any) {
+      alert(err.message || "Report generation failed");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteReport = async (id: number) => {
+    if (!token) return;
+    if (!confirm("Delete this report?")) return;
+
+    try {
+      await deleteReport(id, token);
+      loadReports();
+    } catch (err: any) {
+      alert(err.message || "Delete failed");
+    }
+  };
+
+  const openDocumentInNewTab = (doc: Document) => {
+    if (doc.file_url) {
+      window.open(doc.file_url, "_blank", "noopener,noreferrer");
+    } else {
+      alert("Document URL not available");
+    }
+  };
+
+  const openReportInNewTab = (report: Report) => {
+    if (report.report_url) {
+      window.open(report.report_url, "_blank", "noopener,noreferrer");
+    } else {
+      alert("Report URL not available");
+    }
+  };
+
+  /* ===================== FILTERS ===================== */
+
   const filteredDocs = documents.filter((doc) =>
     doc.file_name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const filteredReports = reports.filter((report) =>
+    report.report_name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  /* ===================== RENDER ===================== */
+
+  if (!projectId) {
+    return (
+      <section className="flex flex-col h-full bg-gray-50 p-6">
+        <div className="flex flex-col items-center justify-center h-full text-gray-400">
+          <svg
+            className="w-16 h-16 mb-4 text-gray-300"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.5a2 2 0 00-1 .267"
+            />
+          </svg>
+          <p className="text-lg font-semibold text-gray-600">
+            Select a project to view documentation
+          </p>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="flex flex-col h-full bg-gray-50">
       {/* HEADER */}
-      <div className="bg-white border-b border-gray-200 p-4 sm:p-6 shadow-sm">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
-          <div>
-            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">
-              Documentation
-            </h2>
-            <p className="text-xs sm:text-sm text-gray-600">
-              {projectId
-                ? `Project ID: ${projectId}`
-                : "Select a project to view documents"}
-            </p>
+      <header className="bg-white border-b border-gray-200 shadow-sm">
+        <div className="p-6">
+          <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
+            Documentation
+          </h1>
+
+          {/* SEARCH BAR */}
+          <div className="mb-6">
+            <input
+              className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-red-500 text-black"
+              placeholder={`Search ${activeTab}...`}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
           </div>
-          <div className="flex gap-2 sm:gap-4 items-center w-full sm:w-auto">
-            <div className="bg-blue-50 px-3 sm:px-4 py-2 rounded-lg text-center flex-1 sm:flex-none">
-              <p className="text-xl sm:text-2xl font-bold text-blue-600">
-                {documents.length}
-              </p>
-              <p className="text-xs text-gray-600">Documents</p>
+
+          {/* TABS & ACTION BUTTONS */}
+          <div className="flex justify-between items-center gap-4 flex-wrap">
+            <div className="flex gap-0 border-b border-gray-200">
+              <button
+                onClick={() => setActiveTab("documents")}
+                className={`px-4 sm:px-6 py-3 font-semibold transition-all text-sm sm:text-base whitespace-nowrap ${
+                  activeTab === "documents"
+                    ? "text-red-600 border-b-2 border-red-600"
+                    : "text-gray-600 hover:text-gray-900"
+                }`}
+              >
+                📄 Documents
+              </button>
+              <button
+                onClick={() => setActiveTab("reports")}
+                className={`px-4 sm:px-6 py-3 font-semibold transition-all text-sm sm:text-base whitespace-nowrap ${
+                  activeTab === "reports"
+                    ? "text-red-600 border-b-2 border-red-600"
+                    : "text-gray-600 hover:text-gray-900"
+                }`}
+              >
+                📊 Reports
+              </button>
             </div>
-            <div className="bg-purple-50 px-3 sm:px-4 py-2 rounded-lg text-center flex-1 sm:flex-none">
-              <p className="text-2xl font-bold text-purple-600">
-                {reports.length}
-              </p>
-              <p className="text-xs text-gray-600">Reports</p>
-            </div>
-            {projectId && (
-              <div className="flex gap-2 w-full sm:w-auto flex-col sm:flex-row">
+
+            <div className="flex gap-2">
+              {activeTab === "documents" && (
                 <button
                   onClick={() => setIsModalOpen(true)}
-                  className="flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-blue-500 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-xl hover:shadow-lg transition-all hover:scale-105 font-semibold text-sm sm:text-base whitespace-nowrap"
+                  className="flex items-center justify-center gap-2 bg-gradient-to-r from-red-600 to-red-500 text-white px-4 sm:px-6 py-3 rounded-xl hover:shadow-lg transition-all hover:scale-105 font-semibold text-sm sm:text-base whitespace-nowrap"
                 >
                   <svg
-                    className="w-4 sm:w-5 h-4 sm:h-5"
+                    className="w-5 h-5"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -224,15 +287,16 @@ export default function Documentation() {
                       d="M12 4v16m8-8H4"
                     />
                   </svg>
-                  <span className="hidden sm:inline">Upload Document</span>
-                  <span className="sm:hidden">Upload</span>
+                  Upload
                 </button>
+              )}
+              {activeTab === "reports" && (
                 <button
                   onClick={() => setIsGenerateReportOpen(true)}
-                  className="flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-purple-500 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-xl hover:shadow-lg transition-all hover:scale-105 font-semibold text-sm sm:text-base whitespace-nowrap"
+                  className="flex items-center justify-center gap-2 bg-gradient-to-r from-red-600 to-red-500 text-white px-4 sm:px-6 py-3 rounded-xl hover:shadow-lg transition-all hover:scale-105 font-semibold text-sm sm:text-base whitespace-nowrap"
                 >
                   <svg
-                    className="w-4 sm:w-5 h-4 sm:h-5"
+                    className="w-5 h-5"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -241,262 +305,48 @@ export default function Documentation() {
                       strokeLinecap="round"
                       strokeLinejoin="round"
                       strokeWidth={2}
-                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                      d="M12 4v16m8-8H4"
                     />
                   </svg>
-                  <span className="hidden sm:inline">Generate Report</span>
-                  <span className="sm:hidden">Report</span>
+                  Generate
                 </button>
-              </div>
-            )}
+              )}
+            </div>
           </div>
-        </div>{" "}
-        {/* Tabs */}
-        <div className="flex gap-2 sm:gap-4 border-b border-gray-200 mb-4 overflow-x-auto">
-          <button
-            onClick={() => setActiveTab("documents")}
-            className={`px-3 sm:px-4 py-2 font-semibold transition-all text-sm sm:text-base whitespace-nowrap ${
-              activeTab === "documents"
-                ? "text-blue-600 border-b-2 border-blue-600"
-                : "text-gray-600 hover:text-gray-900"
-            }`}
-          >
-            📄 Documents
-          </button>
-          <button
-            onClick={() => setActiveTab("reports")}
-            className={`px-3 sm:px-4 py-2 font-semibold transition-all text-sm sm:text-base whitespace-nowrap ${
-              activeTab === "reports"
-                ? "text-purple-600 border-b-2 border-purple-600"
-                : "text-gray-600 hover:text-gray-900"
-            }`}
-          >
-            📊 Generated Reports
-          </button>
         </div>
-        {/* Search Bar */}
-        {projectId && (
-          <input
-            type="text"
-            placeholder={`Search ${activeTab}...`}
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        )}
-      </div>
+      </header>
 
-      {/* CONTENT */}
-      <div className="flex-1 overflow-y-auto p-4 sm:p-6">
-        {/* No project selected */}
-        {!projectId && (
-          <div className="flex items-center justify-center h-full text-gray-400">
-            <div className="text-center">
-              <p className="text-lg">📁 No Project Selected</p>
-              <p className="text-sm">
-                Select a project from sidebar to view documents
-              </p>
-            </div>
+      {/* MAIN CONTENT */}
+      <main className="flex-1 p-6 overflow-y-auto">
+        {/* LOADING STATES */}
+        {activeTab === "documents" && docsLoading && (
+          <div className="flex flex-col items-center justify-center h-48">
+            <div className="animate-spin w-12 h-12 border-4 border-gray-300 border-t-red-500 rounded-full mb-4"></div>
+            <p className="text-gray-600">Loading documents...</p>
+          </div>
+        )}
+        {activeTab === "reports" && reportsLoading && (
+          <div className="flex flex-col items-center justify-center h-48">
+            <div className="animate-spin w-12 h-12 border-4 border-gray-300 border-t-red-500 rounded-full mb-4"></div>
+            <p className="text-gray-600">Loading reports...</p>
           </div>
         )}
 
-        {/* Loading */}
-        {isLoading && (
-          <div className="flex items-center justify-center h-full">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-              <p className="text-gray-600">Loading documents...</p>
-            </div>
-          </div>
-        )}
-
-        {/* Error */}
+        {/* ERROR STATE */}
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
-            {error}
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg mb-4">
+            <p className="font-semibold">Error</p>
+            <p>{error}</p>
           </div>
         )}
 
-        {/* No documents */}
-        {activeTab === "documents" &&
-          projectId &&
-          !isLoading &&
-          documents.length === 0 && (
-            <div className="flex items-center justify-center h-full text-gray-400">
-              <div className="text-center">
-                <p className="text-lg">📄 No documents yet</p>
-                <p className="text-sm">
-                  Upload documents from the button above
-                </p>
-              </div>
-            </div>
-          )}
-
-        {/* Documents List */}
-        {activeTab === "documents" &&
-          projectId &&
-          !isLoading &&
-          filteredDocs.length > 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredDocs.map((doc) => (
-                <div
-                  key={doc.id}
-                  className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow p-4 border border-gray-200 cursor-pointer"
-                >
-                  <div className="flex items-start gap-3 mb-3">
-                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                      <span className="text-blue-600 font-bold text-sm">
-                        PDF
-                      </span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3
-                        className="font-semibold text-gray-900 truncate hover:text-blue-600 transition"
-                        onClick={() => setPreviewDoc(doc)}
-                      >
-                        {doc.file_name}
-                      </h3>
-                      <p className="text-xs text-gray-500">
-                        {new Date(doc.created_at).toLocaleDateString()}
-                      </p>
-                    </div>
-                  </div>
-
-                  <p className="text-xs text-gray-600 mb-3">
-                    Uploaded by:{" "}
-                    <span className="font-semibold">
-                      {doc.uploader_username}
-                    </span>
-                  </p>
-
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setPreviewDoc(doc)}
-                      className="flex-1 text-center px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium transition"
-                    >
-                      👁️ Preview
-                    </button>
-                    <a
-                      href={doc.file_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex-1 text-center px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-medium transition"
-                    >
-                      📥 Download
-                    </a>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-        {/* No search results */}
-        {projectId &&
-          !isLoading &&
-          documents.length > 0 &&
-          filteredDocs.length === 0 &&
-          activeTab === "documents" && (
-            <div className="text-center text-gray-400 py-8">
-              <p className="text-lg">No documents match your search</p>
-            </div>
-          )}
-
-        {/* Reports Section */}
-        {activeTab === "reports" && !projectId && (
-          <div className="flex items-center justify-center h-full text-gray-400">
-            <div className="text-center">
-              <p className="text-lg">📊 No Project Selected</p>
-              <p className="text-sm">Select a project to view reports</p>
-            </div>
-          </div>
-        )}
-
-        {/* No reports */}
-        {activeTab === "reports" && projectId && reports.length === 0 && (
-          <div className="flex items-center justify-center h-full text-gray-400">
-            <div className="text-center">
-              <p className="text-lg">📊 No reports yet</p>
-              <p className="text-sm">
-                Generate a report using the Generate Report button
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* Reports List */}
-        {activeTab === "reports" && projectId && reports.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {reports.map((report) => (
-              <div
-                key={report.id}
-                className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow p-4 border border-gray-200"
-              >
-                <div className="flex items-start gap-3 mb-3">
-                  <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <span className="text-purple-600 font-bold text-sm">
-                      📊
-                    </span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3
-                      className="font-semibold text-gray-900 truncate hover:text-purple-600 transition cursor-pointer"
-                      onClick={() => setPreviewReport(report)}
-                    >
-                      {report.report_name}
-                    </h3>
-                    <p className="text-xs text-gray-500">
-                      {new Date(report.created_at).toLocaleDateString()}
-                    </p>
-                  </div>
-                </div>
-
-                <p className="text-xs text-gray-600 mb-3">
-                  Created by:{" "}
-                  <span className="font-semibold">{report.created_by}</span>
-                </p>
-
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setPreviewReport(report)}
-                    className="flex-1 text-center px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium transition"
-                  >
-                    👁️ Preview
-                  </button>
-                  <a
-                    href={report.report_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex-1 text-center px-3 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg text-sm font-medium transition"
-                  >
-                    📥 Download
-                  </a>
-                  <button
-                    onClick={() => handleDeleteReport(report.id)}
-                    className="px-3 py-2 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg text-sm font-medium transition"
-                  >
-                    🗑️
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Upload Document Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-lg max-w-md w-full p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-2xl font-bold text-gray-900">
-                Upload Document
-              </h2>
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
+        {/* DOCUMENTS TAB */}
+        {activeTab === "documents" && !docsLoading && (
+          <div>
+            {filteredDocs.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-48 text-gray-400">
                 <svg
-                  className="w-6 h-6"
+                  className="w-16 h-16 mb-4 text-gray-300"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -505,12 +355,210 @@ export default function Documentation() {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                   />
                 </svg>
-              </button>
-            </div>
+                <p className="text-lg font-semibold text-gray-600">
+                  {searchTerm
+                    ? "No documents match your search"
+                    : "No documents uploaded yet"}
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredDocs.map((doc) => (
+                  <div
+                    key={doc.id}
+                    className="bg-white p-6 rounded-xl shadow hover:shadow-xl transition-all border border-gray-200 hover:border-red-300 group hover:scale-105"
+                  >
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center group-hover:bg-red-200 transition">
+                        <svg
+                          className="w-6 h-6 text-red-600"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"
+                          />
+                        </svg>
+                      </div>
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-3 line-clamp-2 group-hover:text-red-600 transition">
+                      {doc.file_name}
+                    </h3>
+                    <div className="space-y-2 text-sm mb-4">
+                      <p className="text-gray-600">
+                        <span className="font-medium">By:</span>{" "}
+                        {doc.uploader_username}
+                      </p>
+                      <p className="text-gray-500">
+                        {new Date(doc.created_at).toLocaleDateString("en-US", {
+                          year: "numeric",
+                          month: "short",
+                          day: "numeric",
+                        })}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => openDocumentInNewTab(doc)}
+                      className="w-full bg-gradient-to-r from-red-600 to-red-500 text-white px-4 py-3 rounded-lg font-semibold hover:shadow-lg transition-all hover:scale-105 flex items-center justify-center gap-2"
+                    >
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                        />
+                      </svg>
+                      Open Document
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
+        {/* REPORTS TAB */}
+        {activeTab === "reports" && !reportsLoading && (
+          <div>
+            {filteredReports.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-48 text-gray-400">
+                <svg
+                  className="w-16 h-16 mb-4 text-gray-300"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                  />
+                </svg>
+                <p className="text-lg font-semibold text-gray-600">
+                  {searchTerm
+                    ? "No reports match your search"
+                    : "No reports generated yet"}
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredReports.map((report) => (
+                  <div
+                    key={report.id}
+                    className="bg-white p-6 rounded-xl shadow hover:shadow-xl transition-all border border-gray-200 hover:border-red-300 group hover:scale-105"
+                  >
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center group-hover:bg-red-200 transition">
+                        <svg
+                          className="w-6 h-6 text-red-600"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                          />
+                        </svg>
+                      </div>
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-3 line-clamp-2 group-hover:text-red-600 transition">
+                      {report.report_name}
+                    </h3>
+                    <div className="space-y-2 text-sm mb-4">
+                      <p className="text-gray-600">
+                        <span className="font-medium">By:</span>{" "}
+                        {report.created_by}
+                      </p>
+                      <p className="text-gray-500">
+                        {new Date(report.created_at).toLocaleDateString(
+                          "en-US",
+                          {
+                            year: "numeric",
+                            month: "short",
+                            day: "numeric",
+                          }
+                        )}
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => openReportInNewTab(report)}
+                        className="flex-1 bg-gradient-to-r from-red-600 to-red-500 text-white px-4 py-3 rounded-lg font-semibold hover:shadow-lg transition-all hover:scale-105 flex items-center justify-center gap-2"
+                      >
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                          />
+                        </svg>
+                        View
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteReport(report.id);
+                        }}
+                        className="flex-1 bg-red-100 hover:bg-red-200 text-red-700 px-4 py-3 rounded-lg font-semibold transition"
+                      >
+                        🗑️ Delete
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </main>
+
+      {/* UPLOAD MODAL */}
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl p-8 w-full max-w-md animate-fadeIn">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
+                <svg
+                  className="w-6 h-6 text-red-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 4v16m8-8H4"
+                  />
+                </svg>
+              </div>
+              <h3 className="text-2xl font-bold text-gray-900">
+                Upload Document
+              </h3>
+            </div>
             <form onSubmit={handleUpload} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -518,21 +566,21 @@ export default function Documentation() {
                 </label>
                 <input
                   type="text"
+                  placeholder="Enter document name"
                   value={formData.file_name}
                   onChange={(e) =>
                     setFormData({ ...formData, file_name: e.target.value })
                   }
-                  placeholder="Enter document name"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-gray-900"
+                  className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-red-500"
                 />
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Your Name
+                  Uploader Name
                 </label>
                 <input
                   type="text"
+                  placeholder="Enter your name"
                   value={formData.uploader_username}
                   onChange={(e) =>
                     setFormData({
@@ -540,65 +588,58 @@ export default function Documentation() {
                       uploader_username: e.target.value,
                     })
                   }
-                  placeholder="Enter your name"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-gray-900"
+                  className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-red-500"
                 />
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   PDF File
                 </label>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 flex flex-col items-center justify-center cursor-pointer hover:border-blue-500 transition">
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-red-400 transition">
                   <input
                     type="file"
-                    id="fileUpload"
-                    accept=".pdf"
+                    accept="application/pdf"
                     onChange={handleFileChange}
                     className="hidden"
+                    id="file-input"
                   />
-                  <label
-                    htmlFor="fileUpload"
-                    className="cursor-pointer text-center"
-                  >
-                    {selectedFile ? (
-                      <>
-                        <p className="text-sm font-semibold text-gray-900">
-                          ✓ {selectedFile.name}
-                        </p>
-                        <p className="text-xs text-gray-500 mt-1">
-                          Click to change
-                        </p>
-                      </>
-                    ) : (
-                      <>
-                        <p className="text-2xl mb-2">📄</p>
-                        <p className="text-sm font-semibold text-gray-900">
-                          Click to upload PDF
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          or drag and drop
-                        </p>
-                      </>
-                    )}
+                  <label htmlFor="file-input" className="cursor-pointer">
+                    <svg
+                      className="w-10 h-10 mx-auto mb-2 text-gray-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 4v16m8-8H4"
+                      />
+                    </svg>
+                    <p className="text-gray-600 font-medium">
+                      {selectedFile ? selectedFile.name : "Click to select PDF"}
+                    </p>
                   </label>
                 </div>
               </div>
-
               <div className="flex gap-3 pt-4">
                 <button
                   type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium"
+                  onClick={() => {
+                    setIsModalOpen(false);
+                    setSelectedFile(null);
+                  }}
+                  className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-3 rounded-lg font-semibold transition"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="flex-1 px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-lg hover:shadow-lg transition disabled:opacity-50 font-medium"
+                  className="flex-1 bg-gradient-to-r from-red-600 to-red-500 hover:shadow-lg disabled:from-gray-400 disabled:to-gray-400 text-white px-4 py-3 rounded-lg font-semibold transition"
                 >
-                  {isSubmitting ? "Uploading..." : "Upload Document"}
+                  {isSubmitting ? "Uploading..." : "Upload"}
                 </button>
               </div>
             </form>
@@ -606,72 +647,14 @@ export default function Documentation() {
         </div>
       )}
 
-      {/* Document Preview Modal */}
-      {previewDoc && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full h-[90vh] flex flex-col">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <div className="flex-1">
-                <h2 className="text-xl font-semibold text-gray-900">
-                  {previewDoc.file_name}
-                </h2>
-                <p className="text-sm text-gray-500 mt-1">
-                  Uploaded by: {previewDoc.uploader_username} •{" "}
-                  {new Date(previewDoc.created_at).toLocaleDateString()}
-                </p>
-              </div>
-              <button
-                onClick={() => setPreviewDoc(null)}
-                className="text-gray-500 hover:text-gray-700 text-2xl leading-none"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Modal Body - PDF Viewer */}
-            <div className="flex-1 overflow-hidden">
-              <iframe
-                src={previewDoc.file_url}
-                className="w-full h-full"
-                title={previewDoc.file_name}
-              />
-            </div>
-
-            {/* Modal Footer */}
-            <div className="p-6 border-t border-gray-200 flex justify-between">
-              <button
-                onClick={() => setPreviewDoc(null)}
-                className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition"
-              >
-                Close
-              </button>
-              <a
-                href={previewDoc.file_url}
-                download={previewDoc.file_name}
-                className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition"
-              >
-                Download
-              </a>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Generate Report Modal */}
+      {/* GENERATE REPORT MODAL */}
       {isGenerateReportOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-lg max-w-md w-full p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-2xl font-bold text-gray-900">
-                Generate Report
-              </h2>
-              <button
-                onClick={() => setIsGenerateReportOpen(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
+          <div className="bg-white rounded-xl shadow-2xl p-8 w-full max-w-md animate-fadeIn">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
                 <svg
-                  className="w-6 h-6"
+                  className="w-6 h-6 text-red-600"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -680,12 +663,14 @@ export default function Documentation() {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
+                    d="M12 4v16m8-8H4"
                   />
                 </svg>
-              </button>
+              </div>
+              <h3 className="text-2xl font-bold text-gray-900">
+                Generate Report
+              </h3>
             </div>
-
             <form onSubmit={handleGenerateReport} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -693,102 +678,45 @@ export default function Documentation() {
                 </label>
                 <input
                   type="text"
+                  placeholder="Enter report name"
                   value={reportName}
                   onChange={(e) => setReportName(e.target.value)}
-                  placeholder="e.g., Site Inspection Report Q4 2025"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none text-gray-900"
-                  required
+                  className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-red-500"
                 />
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Created By
                 </label>
                 <input
                   type="text"
+                  placeholder="Enter your name"
                   value={reportCreatedBy}
                   onChange={(e) => setReportCreatedBy(e.target.value)}
-                  placeholder="Your name"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none text-gray-900"
-                  required
+                  className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-red-500"
                 />
               </div>
-
-              <p className="text-sm text-gray-600 bg-blue-50 p-3 rounded-lg">
-                ℹ️ This will compile all uploaded documents for this project
-                into a single report.
-              </p>
-
               <div className="flex gap-3 pt-4">
                 <button
                   type="button"
-                  onClick={() => setIsGenerateReportOpen(false)}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium"
+                  onClick={() => {
+                    setIsGenerateReportOpen(false);
+                    setReportName("");
+                    setReportCreatedBy("");
+                  }}
+                  className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-3 rounded-lg font-semibold transition"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="flex-1 px-4 py-2 bg-gradient-to-r from-purple-600 to-purple-500 text-white rounded-lg hover:shadow-lg transition disabled:opacity-50 font-medium"
+                  className="flex-1 bg-gradient-to-r from-red-600 to-red-500 hover:shadow-lg disabled:from-gray-400 disabled:to-gray-400 text-white px-4 py-3 rounded-lg font-semibold transition"
                 >
-                  {isSubmitting ? "Generating..." : "Generate Report"}
+                  {isSubmitting ? "Generating..." : "Generate"}
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
-
-      {/* Report Preview Modal */}
-      {previewReport && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full h-[90vh] flex flex-col">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <div className="flex-1">
-                <h2 className="text-xl font-semibold text-gray-900">
-                  {previewReport.report_name}
-                </h2>
-                <p className="text-sm text-gray-500 mt-1">
-                  Created by: {previewReport.created_by} •{" "}
-                  {new Date(previewReport.created_at).toLocaleDateString()}
-                </p>
-              </div>
-              <button
-                onClick={() => setPreviewReport(null)}
-                className="text-gray-500 hover:text-gray-700 text-2xl leading-none"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Modal Body - PDF Viewer */}
-            <div className="flex-1 overflow-hidden">
-              <iframe
-                src={previewReport.report_url}
-                className="w-full h-full"
-                title={previewReport.report_name}
-              />
-            </div>
-
-            {/* Modal Footer */}
-            <div className="p-6 border-t border-gray-200 flex justify-between">
-              <button
-                onClick={() => setPreviewReport(null)}
-                className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition"
-              >
-                Close
-              </button>
-              <a
-                href={previewReport.report_url}
-                download={previewReport.report_name}
-                className="px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg font-medium transition"
-              >
-                Download
-              </a>
-            </div>
           </div>
         </div>
       )}
