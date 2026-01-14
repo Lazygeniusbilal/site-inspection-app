@@ -20,8 +20,11 @@ export default function Media() {
   );
   const { projectId } = useProject();
   const { token } = useAuth();
+
   const [images, setImages] = useState<MediaItem[]>([]);
   const [videos, setVideos] = useState<MediaItem[]>([]);
+  const [preview, setPreview] = useState<string | null>(null);
+
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -40,7 +43,6 @@ export default function Media() {
     try {
       const data = await fetchMedia(projectId, token);
 
-      // 🔥 Normalize filenames so frontend works
       data.images = (data.images || []).map((img: any) => ({
         ...img,
         file_name: img.file_name || img.filename,
@@ -150,25 +152,23 @@ export default function Media() {
         ) : selectedView === "images" ? (
           images.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {images.map((image: MediaItem) => (
+              {images.map((image) => (
                 <div
                   key={image.id}
                   className="group relative bg-gray-100 rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow"
                 >
                   <img
-                    src={image.file_url || ""}
-                    alt={image.file_name || "image"}
+                    src={image.file_url}
+                    alt={image.file_name}
                     className="w-full h-40 sm:h-48 object-cover group-hover:scale-105 transition-transform duration-300"
                   />
                   <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all flex flex-col items-center justify-center opacity-0 group-hover:opacity-100">
-                    <a
-                      href={image.file_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                    <button
+                      onClick={() => setPreview(image.file_url)}
                       className="bg-white text-red-600 px-4 py-2 rounded-lg font-semibold hover:bg-gray-100 transition text-sm"
                     >
                       View
-                    </a>
+                    </button>
                   </div>
                   <div className="p-3 bg-white border-t">
                     <p className="text-xs font-semibold text-gray-900 truncate">
@@ -195,7 +195,7 @@ export default function Media() {
               >
                 <video
                   src={video.file_url}
-                  className="w-full h-40 sm:h-48 object-cover group-hover:scale-105 transition-transform duration-300 bg-black"
+                  className="w-full h-40 sm:h-48 object-cover bg-black"
                   controls
                 />
                 <div className="p-3 bg-white border-t">
@@ -215,6 +215,16 @@ export default function Media() {
           </div>
         )}
       </div>
+
+      {/* IMAGE MODAL */}
+      {preview && (
+        <div
+          className="fixed inset-0 bg-black/70 flex items-center justify-center z-50"
+          onClick={() => setPreview(null)}
+        >
+          <img src={preview} className="max-w-[90%] max-h-[90%] rounded-lg" />
+        </div>
+      )}
     </section>
   );
 }

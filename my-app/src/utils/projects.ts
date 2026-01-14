@@ -1,6 +1,6 @@
 // api url production
-const API_URL = "https://site-inspection-backend.onrender.com";
-
+// const API_URL = "https://site-inspection-backend.onrender.com";
+const API_URL= "http://127.0.0.1:8000";
 export const createProject = async (
   projectName: string,
   token: string | null
@@ -39,10 +39,13 @@ export const fetchProjects = async (token: string | null) => {
 
   if (!response.ok) {
     const errorData = await response.text();
+    console.log(errorData)
     throw new Error(`Failed to load projects: ${response.status} - ${errorData}`);
-  }
 
+  }
+  console.log(response)
   return await response.json();
+  
 };
 
 export const deleteProject = async (

@@ -4,7 +4,6 @@ import { useAuth } from "@/context/AuthProvider";
 import { useProject } from "@/app/components/Projects";
 import { sendMessage, fetchMessages, ChatMessage } from "@/utils/chat";
 
-// Local message type
 interface Message {
   id: number;
   text: string;
@@ -24,15 +23,15 @@ export default function Communication() {
   const { token } = useAuth();
   const { projectId } = useProject();
 
-  // Auto-scroll when new messages arrive
+  // Scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Fetch messages when project changes
+  // Fetch messages when project changes or token changes
   useEffect(() => {
-    if (projectId) loadMessages();
-  }, [projectId]);
+    if (projectId && token) loadMessages();
+  }, [projectId, token, currentUsername]);
 
   const loadMessages = async () => {
     if (!projectId || !token) return;
@@ -42,7 +41,6 @@ export default function Communication() {
 
     try {
       const data = await fetchMessages(projectId, token);
-
       const transformed: Message[] = (data.messages || []).map(
         (msg: ChatMessage) => ({
           id: msg.id,
@@ -64,13 +62,8 @@ export default function Communication() {
 
   const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault();
-
-    if (!projectId) {
-      alert("Please select a project first!");
-      return;
-    }
-
-    if (userInput.trim() === "") return;
+    if (!projectId) return alert("Please select a project first!");
+    if (!userInput.trim()) return;
 
     setIsLoading(true);
 
@@ -87,7 +80,7 @@ export default function Communication() {
 
       setMessages((prev) => [...prev, newMessage]);
       setUserInput("");
-    } catch (err: any) {
+    } catch (err) {
       alert("Failed to send message!");
     } finally {
       setIsLoading(false);
@@ -96,16 +89,15 @@ export default function Communication() {
 
   // Poll every 5 seconds
   useEffect(() => {
-    if (!projectId) return;
-
+    if (!projectId || !token) return;
     const interval = setInterval(loadMessages, 5000);
     return () => clearInterval(interval);
-  }, [projectId, currentUsername]);
+  }, [projectId, token, currentUsername]);
 
   return (
     <section className="flex flex-col h-full bg-gray-50">
       {/* HEADER */}
-      <div className="bg-white border-b border-gray-200 p-3 sm:p-4 shadow-sm">
+      <div className="sticky top-0 z-10 bg-white border-b border-gray-200 p-3 sm:p-4 shadow-sm">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
             <h2 className="text-xl sm:text-2xl font-bold text-gray-900">
@@ -130,7 +122,6 @@ export default function Communication() {
 
       {/* MESSAGES */}
       <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3 sm:space-y-4">
-        {/* No project selected */}
         {!projectId && (
           <div className="flex items-center justify-center h-full text-gray-400">
             <div className="text-center">
@@ -140,7 +131,6 @@ export default function Communication() {
           </div>
         )}
 
-        {/* Messages empty */}
         {projectId && messages.length === 0 && (
           <div className="flex items-center justify-center h-full text-gray-400">
             <div className="text-center">
@@ -150,9 +140,7 @@ export default function Communication() {
           </div>
         )}
 
-        {/* Render messages */}
         {projectId &&
-          messages.length > 0 &&
           messages.map((msg) => (
             <div
               key={msg.id}
@@ -167,9 +155,9 @@ export default function Communication() {
               )}
 
               <div
-                className={`max-w-xs sm:max-w-sm ${
+                className={`max-w-xs sm:max-w-sm flex flex-col ${
                   msg.isCurrentUser ? "items-end" : "items-start"
-                } flex flex-col`}
+                }`}
               >
                 <div
                   className={`rounded-2xl px-3 sm:px-4 py-2 sm:py-3 shadow-md transition-all hover:shadow-lg text-xs sm:text-sm ${
@@ -183,7 +171,7 @@ export default function Communication() {
                       {msg.sender}
                     </span>
                   )}
-                  <p className="break-words leading-relaxed"></p>
+                  <p className="break-words leading-relaxed">{msg.text}</p>
                 </div>
 
                 <span
@@ -211,7 +199,7 @@ export default function Communication() {
 
       {/* INPUT */}
       {projectId && (
-        <div className="bg-white border-t border-gray-200 p-3 sm:p-4 shadow-lg">
+        <div className="fixed bottom-0 z-10 bg-white border-t border-gray-200 p-3 sm:p-4 shadow-lg w-full">
           <form onSubmit={handleSubmit} className="flex gap-2 sm:gap-3">
             <input
               type="text"
